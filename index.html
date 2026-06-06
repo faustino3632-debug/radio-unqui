@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estación de Radio Inteligente</title>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #ffffff;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .card {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 2px solid #38bdf8;
+            border-radius: 30px;
+            padding: 40px;
+            width: 380px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+        }
+
+        h1 { color: #38bdf8; margin-bottom: 20px; font-size: 24px; }
+        
+        /* Formulario de Login */
+        .campo { margin-bottom: 15px; text-align: left; }
+        label { display: block; margin-bottom: 5px; color: #94a3b8; font-size: 14px; }
+        input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            background-color: #1e293b;
+            color: white;
+            box-sizing: border-box;
+        }
+        
+        button {
+            background-color: #38bdf8;
+            color: #0f172a;
+            border: none;
+            padding: 12px 20px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover { background-color: #7dd3fc; }
+
+        /* Paneles ocultos */
+        .oculto { display: none; }
+
+        /* Botón de Grabar */
+        .boton-grabar {
+            background-color: #ef4444;
+            color: white;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4);
+        }
+        .grabando { background-color: #22c55e; animation: pulso 1.5s infinite; }
+
+        /* Botón de Play Oyente */
+        .boton-play {
+            background-color: #38bdf8;
+            color: #0f172a;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            font-size: 28px;
+            border: none;
+            cursor: pointer;
+        }
+
+        @keyframes pulso {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Tarjeta Principal -->
+    <div class="card">
+        
+        <!-- 1. PANTALLA DE INICIO DE SESIÓN -->
+        <div id="pantalla-login">
+            <h1>🔐 INICIAR SESIÓN</h1>
+            <div class="campo">
+                <label>Nombre de Usuario:</label>
+                <input type="text" id="usuario" placeholder="Ej: admin o tu nombre">
+            </div>
+            <div class="campo oculto" id="grupo-pass">
+                <label>Contraseña de Administrador:</label>
+                <input type="password" id="password" placeholder="Ingresa la clave">
+            </div>
+            <button id="btn-ingresar" onclick="verificarUsuario()">ENTRAR</button>
+        </div>
+
+        <!-- 2. PANEL DEL LOCUTOR (ADMIN) -->
+        <div id="panel-admin" class="oculto">
+            <h1 style="color: #ef4444;">🎙️ MODO LOCUTOR</h1>
+            <p style="color: #94a3b8; font-size: 14px;">Estás conectado como Administrador.</p>
+            <p style="color: #94a3b8; font-size: 14px; margin-bottom: 30px;">Presioná el botón para hablar en vivo.</p>
+            <button class="boton-grabar" id="btn-grabar" onclick="alternarGrabacion()">HABLAR</button>
+            <p id="txt-grabando" style="color: #ef4444; font-weight: bold; margin-top: 20px;" class="oculto">🔴 TRANSMITIENDO TU VOZ</p>
+        </div>
+
+        <!-- 3. PANEL DEL OYENTE (PÚBLICO) -->
+        <div id="panel-oyente" class="oculto">
+            <h1>📻 MODO OYENTE</h1>
+            <p id="saludo-oyente" style="color: #38bdf8; font-weight: bold;"></p>
+            <p style="color: #94a3b8; font-size: 14px; margin-bottom: 30px;">Disfrutá de la radio del Administrador.</p>
+            
+            <!-- Audio en vivo (Usa la de prueba de Zeno o tu link) -->
+            <audio id="audio-oyente" src="https://zeno.fm"></audio>
+            <button class="boton-play" id="btn-play" onclick="controlarAudio()">▶</button>
+        </div>
+
+    </div>
+
+    <script>
+        let pasoPassword = false;
+        let mediaRecorder;
+        let estaGrabando = false;
+
+        // CONTRASEÑA SECRETA QUE ELEGISTE
+        const CLAVE_CORRECTA = "1234"; 
+
+        function verificarUsuario() {
+            const user = document.getElementById('usuario').value.trim().toLowerCase();
+            const passGrupo = document.getElementById('grupo-pass');
+            const passInput = document.getElementById('password');
+
+            if (user === "admin") {
+                if (!pasoPassword) {
+                    // Si puso admin, se abre el casillero de la contraseña
+                    passGrupo.classList.remove('oculto');
+                    passInput.focus();
+                    pasoPassword = true;
+                } else {
+                    // Si ya está el casillero, verifica la contraseña
+                    if (passInput.value === CLAVE_CORRECTA) {
+                        document.getElementById('pantalla-login').classList.add('oculto');
+                        document.getElementById('panel-admin').classList.remove('oculto');
+                        pedirPermisosMicrofono();
+                    } else {
+                        alert("❌ ¡Contraseña incorrecta!");
+                    }
+                }
+            } else if (user !== "") {
+                // Si es cualquier otro usuario entra como oyente
+                document.getElementById('pantalla-login').classList.add('oculto');
+                document.getElementById('panel-oyente').classList.remove('oculto');
+                document.getElementById('saludo-oyente').innerHTML = "¡Hola, " + user.toUpperCase() + "!";
+            } else {
+                alert("Por favor, escribe un nombre de usuario.");
+            }
+        }
+
+        // Configura el micrófono para el Administrador
+        async function pedirPermisosMicrofono() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+            } catch (err) {
+                alert("Para transmitir necesitas activar el micrófono en el navegador.");
+            }
+        }
+
+        function alternarGrabacion() {
+            const btn = document.getElementById('btn-grabar');
+            const txt = document.getElementById('txt-grabando');
+            
+            if (!estaGrabando) {
+                if(mediaRecorder) mediaRecorder.start();
+                estaGrabando = true;
+                btn.innerHTML = "PAUSAR";
+                btn.classList.add('grabando');
+                txt.classList.remove('oculto');
+            } else {
+                if(mediaRecorder) mediaRecorder.stop();
+                estaGrabando = false;
+                btn.innerHTML = "HABLAR";
+                btn.classList.remove('grabando');
+                txt.classList.add('oculto');
+            }
+        }
+
+        // Control del reproductor del oyente
+        function controlarAudio() {
+            const audio = document.getElementById('audio-oyente');
+            const btn = document.getElementById('btn-play');
+            
+            if (audio.paused) {
+                audio.play();
+                btn.innerHTML = "⏸";
+                btn.style.backgroundColor = "#22c55e";
+            } else {
+                audio.pause();
+                btn.innerHTML = "▶";
+                btn.style.backgroundColor = "#38bdf8";
+            }
+        }
+    </script>
+</body>
+</html>
